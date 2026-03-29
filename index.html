@@ -645,7 +645,7 @@
 
         <!-- Footer -->
         <div class="text-center mt-8 text-slate-500 text-xs animate-fade-in" style="animation-delay: 0.3s">
-            <p>© 2026 Sarana Lima Kencana. All rights reserved.</p>
+            <p>© 2026 PT Sarana Lima Kencana. All rights reserved.</p>
         </div>
     </div>
 
@@ -728,6 +728,15 @@
             </div>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+<script>
+const SUPABASE_URL = "https://ottomkgkjwypbadatrbv.supabase.co";
+const SUPABASE_KEY = "sb_publishable_5oBJbRfwRosKpaT4fJ1pOA_E9nYhPVc";
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
 
     <script>
         // ==========================================
@@ -859,7 +868,7 @@
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
-
+        
         // ==========================================
         // FORM SUBMISSION
         // ==========================================
@@ -1224,6 +1233,59 @@ function clearAllData() {
         }
     });
 }
+
+        async function submitData() {
+  const nama = document.getElementById('nama').value;
+  const kategori = document.getElementById('kategori').value;
+  const jumlah = document.getElementById('jumlah').value;
+  const deskripsi = document.getElementById('deskripsi').value;
+
+  const { error } = await client
+    .from('Reimburse')
+    .insert([
+      {
+        nama,
+        kategori,
+        jumlah,
+        deskripsi
+      }
+    ]);
+
+  if (error) {
+    alert('Gagal: ' + error.message);
+    console.log(error);
+  } else {
+    alert('Berhasil disimpan!');
+  }
+}
+
+async function loadData() {
+  const { data, error } = await client
+    .from('Reimburse')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  const container = document.getElementById('list');
+  container.innerHTML = '';
+
+  data.forEach(item => {
+    container.innerHTML += `
+      <div>
+        <h3>${item.nama}</h3>
+        <p>${item.kategori}</p>
+        <p>${item.jumlah}</p>
+        <p>${item.deskripsi}</p>
+      </div>
+    `;
+  });
+}
+
+loadData();
     </script>
 </body>
 </html>
