@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
         .font-display { font-family: 'Space Grotesk', sans-serif; }
@@ -95,6 +96,8 @@
             outline: none;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             color: #f0fdf4;
+            appearance: none;
+            cursor: pointer;
         }
 
         .input-field-v5::placeholder { color: #6b7280; }
@@ -104,6 +107,12 @@
             box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
 
+        .input-field-v5 option {
+            background: #022c22;
+            color: #f0fdf4;
+            padding: 10px;
+        }
+
         .input-icon-v5 {
             position: absolute;
             left: 1rem;
@@ -111,9 +120,58 @@
             transform: translateY(-50%);
             color: #6b7280;
             transition: color 0.3s ease;
+            pointer-events: none;
         }
 
         .input-field-v5:focus ~ .input-icon-v5 { color: #34d399; }
+
+        .dropdown-arrow {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            pointer-events: none;
+            transition: transform 0.3s ease;
+        }
+
+        .input-group-v5:focus-within .dropdown-arrow {
+            transform: translateY(-50%) rotate(180deg);
+            color: #34d399;
+        }
+
+        .id-karyawan-display {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .id-karyawan-display.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .id-karyawan-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .id-karyawan-value {
+            font-family: 'Space Grotesk', monospace;
+            font-weight: 700;
+            color: #34d399;
+            font-size: 1.1rem;
+        }
 
         .btn-v5 {
             background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
@@ -258,7 +316,6 @@
             background-clip: text;
         }
 
-        /* Toast notification */
         .toast-container {
             position: fixed;
             top: 20px;
@@ -283,26 +340,140 @@
             gap: 12px;
         }
 
-        .toast.show {
-            transform: translateX(0);
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: rgba(16, 185, 129, 0.95); border: 1px solid rgba(52, 211, 153, 0.5); }
+        .toast.error { background: rgba(239, 68, 68, 0.95); border: 1px solid rgba(248, 113, 113, 0.5); }
+        .toast.warning { background: rgba(245, 158, 11, 0.95); border: 1px solid rgba(251, 191, 36, 0.5); }
+
+        .mandatory { color: #ef4444; font-size: 0.75rem; margin-left: 2px; }
+
+        .receipt-modal {
+            background: white;
+            color: #1f2937;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .toast.success {
-            background: rgba(16, 185, 129, 0.95);
-            border: 1px solid rgba(52, 211, 153, 0.5);
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #10b981;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
         }
 
-        .toast.error {
-            background: rgba(239, 68, 68, 0.95);
-            border: 1px solid rgba(248, 113, 113, 0.5);
+        .receipt-logo {
+            width: 60px; height: 60px;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
         }
 
-        .toast.warning {
-            background: rgba(245, 158, 11, 0.95);
-            border: 1px solid rgba(251, 191, 36, 0.5);
+        .receipt-stamp {
+            position: absolute;
+            top: 20px; right: 20px;
+            width: 100px; height: 100px;
+            border: 4px solid #10b981;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 14px;
+            transform: rotate(-15deg);
+            opacity: 0.8;
         }
+
+        .receipt-row { display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.875rem; }
+        .receipt-label { color: #6b7280; }
+        .receipt-value { font-weight: 600; color: #111827; }
+
+        .receipt-amount {
+            background: #f0fdf4;
+            border: 1px solid #10b981;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin: 1.5rem 0;
+        }
+
+        .receipt-amount-value { font-size: 1.5rem; font-weight: bold; color: #059669; }
+
+        .receipt-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 2px dashed #10b981;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .receipt-id {
+            font-family: 'Space Grotesk', monospace;
+            font-size: 0.75rem;
+            color: #10b981;
+            background: #ecfdf5;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .hidden-admin { display: none !important; }
+
+        .status-approved {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+
+        .status-rejected {
+            background: rgba(239, 68, 68, 0.2) !important;
+            color: #f87171 !important;
+            border-color: rgba(239, 68, 68, 0.5) !important;
+        }
+
+        .btn-approve {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-approve:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-reject {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+
+        .btn-reject:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .action-buttons { display: flex; gap: 0.5rem; }
     </style>
 </head>
+<link rel="icon" type="image/png" href="img/Screenshot 2026-03-12 123956.png">
 <body class="flex flex-col min-h-screen text-slate-200">
 
     <!-- Toast Container -->
@@ -330,8 +501,8 @@
                     <p class="text-sm text-emerald-600 font-medium tracking-wide">REIMBURSEMENT SYSTEM</p>
                 </div>
             </div>
-            <div class="hidden sm:flex items-center gap-2">
-                <span class="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
+            <div class="flex items-center gap-3">
+                <span class="hidden sm:inline-flex px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold">
                     <i class="fas fa-circle text-[10px] mr-2 animate-pulse"></i>Online
                 </span>
             </div>
@@ -383,20 +554,43 @@
 
             <form id="reimburseForm" class="space-y-8">
                 
-                <!-- Section: Informasi Pengaju -->
+                <!-- Section: Data Karyawan -->
                 <div class="space-y-4">
                     <h3 class="text-lg font-semibold text-white flex items-center gap-3 font-display">
                         <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                             <i class="fas fa-user text-sm text-emerald-400"></i>
                         </div>
-                        Informasi Pengaju
+                        Data Karyawan
                     </h3>
                     
+                    <!-- Dropdown Nama Karyawan -->
                     <div class="input-group-v5">
-                        <input type="text" id="nama" name="nama" required 
-                               class="input-field-v5" placeholder="Nama Lengkap">
+                        <select id="nama" name="nama" required 
+                                class="input-field-v5" onchange="onKaryawanSelect(this)">
+                            <option value="" disabled selected>Pilih Nama Karyawan</option>
+                            <option value="Kevin Riverson" data-id="SLK2602001" data-dept="Operation" data-email="kevinriverson@saranalimakencana.id">Kevin Riverson - Operation</option>
+                            <option value="Debbie Gabriella" data-id="SLK2602002" data-dept="Finance & Accounting" data-email="debbiegabriella@saranalimakencana.id">Debbie Gabriella - Finance & Accounting</option>
+                            <option value="Viji Astuti" data-id="SLK2602003" data-dept="Finance & Accounting" data-email="admin@saranalimakencana.id">Viji Astuti - Finance & Accounting</option>
+                            <option value="Sherly Meilani" data-id="SLK2602004" data-dept="Operation" data-email="sales01@saranalimakencana.id">Sherly Meilani - Operation</option>
+                        </select>
                         <i class="fas fa-user input-icon-v5"></i>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
                     </div>
+
+                    <!-- Display Info Karyawan -->
+                    <div id="idKaryawanDisplay" class="id-karyawan-display">
+                        <i class="fas fa-id-card text-emerald-400"></i>
+                        <div class="flex-1">
+                            <div class="id-karyawan-label">ID Karyawan</div>
+                            <div class="id-karyawan-value" id="idKaryawanValue">-</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="id-karyawan-label">Departemen</div>
+                            <div class="text-sm text-emerald-300 font-medium" id="deptKaryawanValue">-</div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="idKaryawan" name="idKaryawan">
 
                     <div class="input-group-v5">
                         <input type="email" id="email" name="email" required 
@@ -465,11 +659,13 @@
                         </div>
 
                         <div class="input-group-v5">
-                            <input type="number" id="jumlah" name="jumlah" required min="0" step="1000"
-                                   class="input-field-v5 font-mono" placeholder="Jumlah (Rp)">
+                            <input type="text" id="jumlahDisplay" name="jumlahDisplay" required 
+                                   class="input-field-v5 font-mono" placeholder="Jumlah (Rp)" 
+                                   oninput="formatRupiah(this)" onblur="syncJumlah(this)">
                             <i class="fas fa-money-bill-wave input-icon-v5"></i>
                             <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">IDR</span>
                         </div>
+                        <input type="hidden" id="jumlah" name="jumlah">
                     </div>
 
                     <div class="input-group-v5">
@@ -487,7 +683,7 @@
                         <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
                             <i class="fas fa-camera text-sm text-cyan-400"></i>
                         </div>
-                        Upload Bukti
+                        Upload Bukti <span class="mandatory">*</span>
                     </h3>
 
                     <div id="uploadZone" class="upload-zone-v5 rounded-2xl p-8 sm:p-12 text-center cursor-pointer group relative overflow-hidden">
@@ -498,7 +694,7 @@
                                 <i class="fas fa-cloud-upload-alt text-2xl text-emerald-400"></i>
                             </div>
                             <div>
-                                <p class="text-base font-medium text-white">Klik atau Drop File Disini</p>
+                                <p class="text-base font-medium text-white">Klik atau Drop File Disini <span class="mandatory">*</span></p>
                                 <p class="text-sm text-slate-500 mt-1">JPEG, PNG, atau PDF (Max 10MB)</p>
                             </div>
                             <button type="button" class="px-5 py-2 rounded-full bg-white/5 border border-white/10 text-emerald-400 text-sm font-medium hover:bg-white/10 transition">
@@ -523,6 +719,9 @@
                             <p id="fileSizeDisplay" class="text-xs text-slate-500"></p>
                         </div>
                     </div>
+                    <p id="fileError" class="text-red-400 text-sm hidden">
+                        <i class="fas fa-exclamation-circle mr-1"></i>Upload bukti wajib diisi
+                    </p>
                 </div>
 
                 <!-- Submit Button -->
@@ -542,8 +741,8 @@
             </form>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="text-center mt-8 flex flex-wrap justify-center gap-3 animate-fade-in" style="animation-delay: 0.2s">
+        <!-- Action Buttons - Hanya muncul untuk Kevin & Debbie -->
+        <div id="adminActions" class="text-center mt-8 flex flex-wrap justify-center gap-3 animate-fade-in hidden-admin" style="animation-delay: 0.2s">
             <a href="#" onclick="showDataPanel(); return false;" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white transition text-sm font-medium backdrop-blur-sm">
                 <i class="fas fa-table"></i>
                 Lihat Data
@@ -581,29 +780,100 @@
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between"><span class="text-slate-400">ID:</span> <span id="successId" class="font-mono font-bold text-emerald-400"></span></div>
                     <div class="flex justify-between"><span class="text-slate-400">Nama:</span> <span id="successName" class="font-medium text-white"></span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">ID Karyawan:</span> <span id="successIdKaryawan" class="font-mono font-bold text-emerald-400"></span></div>
                     <div class="flex justify-between"><span class="text-slate-400">Kategori:</span> <span id="successKategori" class="font-medium text-white"></span></div>
                     <div class="flex justify-between"><span class="text-slate-400">Jumlah:</span> <span id="successAmount" class="font-bold text-emerald-400"></span></div>
                 </div>
             </div>
 
             <div class="space-y-3">
-                <button onclick="closeModal()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition shadow-lg shadow-emerald-500/25">
-                    Ajukan Lagi
+                <button onclick="showApprovalReceipt()" class="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold transition shadow-lg shadow-emerald-500/25">
+                    <i class="fas fa-receipt mr-2"></i>Lihat Bukti Approval
                 </button>
-                <button onclick="exportToExcel()" class="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 font-medium hover:bg-white/10 transition">
-                    <i class="fas fa-file-excel mr-2 text-emerald-400"></i>Download Data Excel
+                <button onclick="closeModal()" class="w-full py-3 rounded-xl bg-white/5 border border-white/10 text-slate-300 font-medium hover:bg-white/10 transition">
+                    Ajukan Lagi
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Data Panel Modal -->
+    <!-- Approval Receipt Modal -->
+    <div id="receiptModal" class="fixed inset-0 bg-black/90 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="receipt-modal relative">
+            <div class="receipt-stamp">
+                <span id="receiptStatusStamp">APPROVED</span>
+            </div>
+            
+            <div class="receipt-header">
+                <div class="receipt-logo">
+                    <i class="fas fa-check text-white text-2xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-800">BUKTI APPROVAL</h2>
+                <p class="text-sm text-gray-500">PT Sarana Lima Kencana</p>
+                <span class="receipt-id" id="receiptId">ID: -</span>
+            </div>
+
+            <div class="receipt-row">
+                <span class="receipt-label">Nama Karyawan</span>
+                <span class="receipt-value" id="receiptName">-</span>
+            </div>
+            <div class="receipt-row">
+                <span class="receipt-label">ID Karyawan</span>
+                <span class="receipt-value" id="receiptIdKaryawan">-</span>
+            </div>
+            <div class="receipt-row">
+                <span class="receipt-label">Departemen</span>
+                <span class="receipt-value" id="receiptDept">-</span>
+            </div>
+            <div class="receipt-row">
+                <span class="receipt-label">Kategori</span>
+                <span class="receipt-value" id="receiptKategori">-</span>
+            </div>
+            <div class="receipt-row">
+                <span class="receipt-label">Tanggal Pengajuan</span>
+                <span class="receipt-value" id="receiptTanggal">-</span>
+            </div>
+            <div class="receipt-row">
+                <span class="receipt-label">Status</span>
+                <span class="receipt-value" id="receiptStatus" style="font-weight: bold;">-</span>
+            </div>
+
+            <div class="receipt-amount">
+                <div class="text-sm text-gray-500 mb-1">Total Reimbursement</div>
+                <div class="receipt-amount-value" id="receiptAmount">Rp0</div>
+            </div>
+
+            <div class="receipt-row">
+                <span class="receipt-label">Deskripsi</span>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 mb-4" id="receiptDeskripsi">
+                -
+            </div>
+
+            <div class="receipt-footer">
+                <p class="font-semibold text-gray-800" id="receiptApprovedBy">Disetujui oleh Sistem</p>
+                <p id="receiptTimestamp">-</p>
+                <p class="mt-2 text-xs">Email konfirmasi telah dikirim</p>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="printReceipt()" class="flex-1 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium transition">
+                    <i class="fas fa-print mr-2"></i>Cetak
+                </button>
+                <button onclick="closeReceiptModal()" class="flex-1 py-2.5 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Panel Modal - Admin Only -->
     <div id="dataModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
-        <div class="modal-v5 rounded-3xl p-6 max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
+        <div class="modal-v5 rounded-3xl p-6 max-w-6xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-white/10 flex flex-col">
             <div class="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
                 <div>
                     <h3 class="text-2xl font-bold text-white font-display">Data Reimburse</h3>
-                    <p class="text-sm text-slate-500 mt-1">Semua pengajuan tersimpan di cloud</p>
+                    <p class="text-sm text-slate-500 mt-1">Kelola pengajuan reimbursement</p>
                 </div>
                 <div class="flex gap-3">
                     <button onclick="exportToExcel()" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition shadow-lg shadow-emerald-500/25">
@@ -620,7 +890,8 @@
                     <thead class="sticky top-0 bg-slate-900/90 backdrop-blur-sm">
                         <tr>
                             <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">ID</th>
-                            <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">Tanggal</th>
+                            <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">ID Karyawan</th>
+                            <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">Tanggal Input</th>
                             <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">Nama</th>
                             <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10">Kategori</th>
                             <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-white/10 text-right">Jumlah</th>
@@ -630,7 +901,7 @@
                         </tr>
                     </thead>
                     <tbody id="dataTableBody" class="text-sm">
-                        <tr><td colspan="8" class="p-8 text-center text-slate-500">Belum ada data</td></tr>
+                        <tr><td colspan="9" class="p-8 text-center text-slate-500">Belum ada data</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -645,6 +916,18 @@
     </div>
 
     <script>
+        // ==========================================
+        // ADMIN CONFIGURATION - KEVIN & DEBBIE ONLY
+        // ==========================================
+        const ADMIN_USERS = [
+            { id: "SLK2602001", name: "Kevin Riverson" },
+            { id: "SLK2602002", name: "Debbie Gabriella" }
+        ];
+        
+        let currentUserId = null;
+        let currentUserName = null;
+        let isAdmin = false;
+
         // ==========================================
         // TOAST NOTIFICATION SYSTEM
         // ==========================================
@@ -697,6 +980,7 @@
         let currentFile = null;
         let submissions = [];
         let selectedKategori = '';
+        let lastSubmissionData = null;
 
         // ==========================================
         // INIT
@@ -706,6 +990,25 @@
             updateDateInput();
             setupEventListeners();
         });
+
+        // ==========================================
+        // ADMIN CHECK FUNCTION
+        // ==========================================
+        function checkAdminAccess() {
+            isAdmin = ADMIN_USERS.some(admin => 
+                admin.id === currentUserId && admin.name === currentUserName
+            );
+            
+            const adminActions = document.getElementById('adminActions');
+            
+            if (isAdmin) {
+                adminActions.classList.remove('hidden-admin');
+                console.log('Admin mode activated for:', currentUserName);
+            } else {
+                adminActions.classList.add('hidden-admin');
+                console.log('User mode:', currentUserName || 'No user selected');
+            }
+        }
 
         function setupEventListeners() {
             const uploadZone = document.getElementById('uploadZone');
@@ -748,6 +1051,59 @@
         }
 
         // ==========================================
+        // FORMAT RUPIAH INPUT
+        // ==========================================
+        function formatRupiah(input) {
+            let value = input.value.replace(/[^0-9]/g, '');
+            if (value === '') {
+                input.value = '';
+                return;
+            }
+            
+            let formatted = new Intl.NumberFormat('id-ID').format(parseInt(value));
+            input.value = 'Rp ' + formatted;
+            document.getElementById('jumlah').value = value;
+        }
+
+        function syncJumlah(input) {
+            let value = input.value.replace(/[^0-9]/g, '');
+            document.getElementById('jumlah').value = value;
+        }
+
+        function formatRupiahStatic(amount) {
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
+        }
+
+        // ==========================================
+        // KARYAWAN SELECT HANDLER
+        // ==========================================
+        function onKaryawanSelect(select) {
+            const selectedOption = select.options[select.selectedIndex];
+            const idKaryawan = selectedOption.getAttribute('data-id');
+            const namaKaryawan = selectedOption.value;
+            const dept = selectedOption.getAttribute('data-dept');
+            const email = selectedOption.getAttribute('data-email');
+            
+            if (idKaryawan) {
+                currentUserId = idKaryawan;
+                currentUserName = namaKaryawan;
+                checkAdminAccess();
+                
+                document.getElementById('idKaryawan').value = idKaryawan;
+                document.getElementById('idKaryawanValue').textContent = idKaryawan;
+                document.getElementById('deptKaryawanValue').textContent = dept;
+                document.getElementById('idKaryawanDisplay').classList.add('show');
+                document.getElementById('email').value = email;
+            } else {
+                currentUserId = null;
+                currentUserName = null;
+                isAdmin = false;
+                checkAdminAccess();
+                document.getElementById('idKaryawanDisplay').classList.remove('show');
+            }
+        }
+
+        // ==========================================
         // KATEGORI
         // ==========================================
         function selectKategori(button, value) {
@@ -778,6 +1134,7 @@
             document.getElementById('previewState').classList.remove('hidden');
             document.getElementById('fileNameDisplay').textContent = file.name;
             document.getElementById('fileSizeDisplay').textContent = formatFileSize(file.size);
+            document.getElementById('fileError').classList.add('hidden');
 
             if (file.type === 'application/pdf') {
                 document.getElementById('imagePreview').classList.add('hidden');
@@ -827,12 +1184,15 @@
                 submissions = data || [];
                 updateStats();
                 
-                supabaseClient
-                    .channel('reimbursements')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'reimbursements' }, () => {
-                        loadDataFromServer();
-                    })
-                    .subscribe();
+                if (!window.realtimeSetup) {
+                    window.realtimeSetup = true;
+                    supabaseClient
+                        .channel('reimbursements')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: 'reimbursements' }, () => {
+                            loadDataFromServer();
+                        })
+                        .subscribe();
+                }
                     
             } catch (error) {
                 showToast('Gagal memuat data: ' + error.message, 'error');
@@ -843,6 +1203,7 @@
             e.preventDefault();
 
             if (!currentFile) {
+                document.getElementById('fileError').classList.remove('hidden');
                 showToast('Mohon upload bukti pengeluaran', 'error');
                 return;
             }
@@ -851,6 +1212,18 @@
             if (!kategori) {
                 document.getElementById('kategoriError').classList.remove('hidden');
                 showToast('Pilih kategori pengeluaran', 'error');
+                return;
+            }
+
+            const idKaryawan = document.getElementById('idKaryawan').value;
+            if (!idKaryawan) {
+                showToast('Pilih nama karyawan', 'error');
+                return;
+            }
+
+            const jumlah = document.getElementById('jumlah').value;
+            if (!jumlah || parseInt(jumlah) <= 0) {
+                showToast('Masukkan jumlah yang valid', 'error');
                 return;
             }
 
@@ -870,16 +1243,23 @@
                     .from('reimburse-files')
                     .getPublicUrl(fileName);
                 
+                const selectedOption = document.querySelector('#nama option:checked');
+                const dept = selectedOption ? selectedOption.getAttribute('data-dept') : '';
+
                 const formData = {
                     nama: document.getElementById('nama').value,
+                    employee_id: idKaryawan,
+                    departemen: dept,
                     email: document.getElementById('email').value,
                     kategori: kategori,
                     tanggal: document.getElementById('tanggal').value,
-                    jumlah: parseInt(document.getElementById('jumlah').value),
+                    jumlah: parseInt(jumlah),
                     deskripsi: document.getElementById('deskripsi').value,
                     file_url: urlData.publicUrl,
                     filename: currentFile.name,
-                    status: 'pending'
+                    status: 'pending',
+                    approved_by: null,
+                    approved_at: null
                 };
 
                 const { data, error } = await supabaseClient
@@ -889,9 +1269,28 @@
                 
                 if (error) throw error;
                 
+                lastSubmissionData = {
+                    id: data[0].id,
+                    nama: formData.nama,
+                    idKaryawan: idKaryawan,
+                    departemen: dept,
+                    kategori: formData.kategori,
+                    jumlah: formData.jumlah,
+                    deskripsi: formData.deskripsi,
+                    tanggal: formData.tanggal,
+                    email: formData.email,
+                    file_url: formData.file_url,
+                    status: 'pending',
+                    approved_by: null,
+                    approved_at: null
+                };
+
+                await sendEmailConfirmation(lastSubmissionData);
+                
                 showSuccess({
                     id: data[0].id,
                     nama: formData.nama,
+                    idKaryawan: idKaryawan,
                     kategori: formData.kategori,
                     jumlah: formData.jumlah
                 });
@@ -902,6 +1301,42 @@
                 showToast('Terjadi kesalahan: ' + error.message, 'error');
             } finally {
                 setLoading(false);
+            }
+        }
+
+        // ==========================================
+        // EMAIL CONFIRMATION
+        // ==========================================
+        async function sendEmailConfirmation(data) {
+            try {
+                if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
+                    console.log('EmailJS belum dikonfigurasi.');
+                    return;
+                }
+
+                const templateParams = {
+                    to_email: data.email,
+                    to_name: data.nama,
+                    employee_id: data.idKaryawan,
+                    department: data.departemen,
+                    reimbursement_id: data.id,
+                    category: data.kategori,
+                    amount: formatRupiahStatic(data.jumlah),
+                    description: data.deskripsi,
+                    date: new Date().toLocaleDateString('id-ID', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }),
+                    file_link: data.file_url
+                };
+
+                await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams);
+                showToast('Email konfirmasi telah dikirim!', 'success');
+                
+            } catch (error) {
+                console.error('Email error:', error);
             }
         }
 
@@ -932,19 +1367,24 @@
             const pending = submissions.filter(item => item.status === 'pending').length;
             
             document.getElementById('statTotal').textContent = count;
-            document.getElementById('statAmount').textContent = 'Rp' + total.toLocaleString('id-ID');
+            document.getElementById('statAmount').textContent = formatRupiahStatic(total);
             document.getElementById('statPending').textContent = pending;
         }
 
         function updateDateInput() {
-            document.getElementById('tanggal').valueAsDate = new Date();
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('tanggal').value = `${yyyy}-${mm}-${dd}`;
         }
 
         function showSuccess(data) {
             document.getElementById('successId').textContent = data.id;
             document.getElementById('successName').textContent = data.nama;
+            document.getElementById('successIdKaryawan').textContent = data.idKaryawan;
             document.getElementById('successKategori').textContent = data.kategori;
-            document.getElementById('successAmount').textContent = 'Rp' + data.jumlah.toLocaleString('id-ID');
+            document.getElementById('successAmount').textContent = formatRupiahStatic(data.jumlah);
             document.getElementById('successModal').classList.remove('hidden');
             document.getElementById('successModal').classList.add('flex');
         }
@@ -958,12 +1398,198 @@
             document.querySelectorAll('.kategori-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById('kategori').value = '';
             selectedKategori = '';
+            document.getElementById('idKaryawan').value = '';
+            document.getElementById('idKaryawanDisplay').classList.remove('show');
+            document.getElementById('idKaryawanValue').textContent = '-';
+            document.getElementById('deptKaryawanValue').textContent = '-';
+            document.getElementById('jumlahDisplay').value = '';
+            document.getElementById('jumlah').value = '';
+            
+            currentUserId = null;
+            currentUserName = null;
+            isAdmin = false;
+            checkAdminAccess();
         }
 
         // ==========================================
-        // DATA PANEL
+        // APPROVAL RECEIPT
+        // ==========================================
+        function showApprovalReceipt() {
+            if (!lastSubmissionData) return;
+            
+            const data = lastSubmissionData;
+            
+            document.getElementById('receiptId').textContent = 'ID: ' + data.id;
+            document.getElementById('receiptName').textContent = data.nama;
+            document.getElementById('receiptIdKaryawan').textContent = data.idKaryawan;
+            document.getElementById('receiptDept').textContent = data.departemen;
+            document.getElementById('receiptKategori').textContent = data.kategori;
+            document.getElementById('receiptTanggal').textContent = new Date(data.tanggal).toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const status = data.status || 'pending';
+            const statusEl = document.getElementById('receiptStatus');
+            const stampEl = document.getElementById('receiptStatusStamp');
+            const approvedByEl = document.getElementById('receiptApprovedBy');
+            
+            statusEl.textContent = status.toUpperCase();
+            stampEl.textContent = status === 'approved' ? 'APPROVED' : status === 'rejected' ? 'REJECTED' : 'PENDING';
+            
+            if (status === 'approved') {
+                statusEl.style.color = '#059669';
+                stampEl.style.borderColor = '#10b981';
+                stampEl.style.color = '#10b981';
+                approvedByEl.textContent = data.approved_by ? `Disetujui oleh: ${data.approved_by}` : 'Disetujui oleh Sistem';
+            } else if (status === 'rejected') {
+                statusEl.style.color = '#dc2626';
+                stampEl.style.borderColor = '#ef4444';
+                stampEl.style.color = '#ef4444';
+                approvedByEl.textContent = data.approved_by ? `Ditolak oleh: ${data.approved_by}` : 'Ditolak';
+            } else {
+                statusEl.style.color = '#d97706';
+                stampEl.style.borderColor = '#f59e0b';
+                stampEl.style.color = '#f59e0b';
+                approvedByEl.textContent = 'Menunggu Persetujuan';
+            }
+            
+            document.getElementById('receiptAmount').textContent = formatRupiahStatic(data.jumlah);
+            document.getElementById('receiptDeskripsi').textContent = data.deskripsi;
+            document.getElementById('receiptTimestamp').textContent = new Date().toLocaleString('id-ID', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            document.getElementById('receiptModal').classList.remove('hidden');
+            document.getElementById('receiptModal').classList.add('flex');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receiptModal').classList.add('hidden');
+            document.getElementById('receiptModal').classList.remove('flex');
+        }
+
+        function printReceipt() {
+            const receiptContent = document.querySelector('.receipt-modal').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Bukti Approval Reimbursement</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+                        body { background: #f3f4f6; padding: 20px; }
+                        .receipt-modal {
+                            background: white;
+                            color: #1f2937;
+                            border-radius: 16px;
+                            padding: 2rem;
+                            max-width: 400px;
+                            margin: 0 auto;
+                            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+                            position: relative;
+                        }
+                        .receipt-stamp {
+                            position: absolute;
+                            top: 20px;
+                            right: 20px;
+                            width: 100px;
+                            height: 100px;
+                            border: 4px solid #10b981;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            color: #10b981;
+                            font-weight: bold;
+                            font-size: 14px;
+                            transform: rotate(-15deg);
+                            opacity: 0.8;
+                        }
+                        .receipt-header {
+                            text-align: center;
+                            border-bottom: 2px dashed #10b981;
+                            padding-bottom: 1rem;
+                            margin-bottom: 1.5rem;
+                        }
+                        .receipt-logo {
+                            width: 60px;
+                            height: 60px;
+                            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+                            border-radius: 12px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 1rem;
+                        }
+                        .receipt-row {
+                            display: flex;
+                            justify-content: space-between;
+                            margin-bottom: 0.75rem;
+                            font-size: 0.875rem;
+                        }
+                        .receipt-label { color: #6b7280; }
+                        .receipt-value { font-weight: 600; color: #111827; }
+                        .receipt-amount {
+                            background: #f0fdf4;
+                            border: 1px solid #10b981;
+                            border-radius: 8px;
+                            padding: 1rem;
+                            text-align: center;
+                            margin: 1.5rem 0;
+                        }
+                        .receipt-amount-value {
+                            font-size: 1.5rem;
+                            font-weight: bold;
+                            color: #059669;
+                        }
+                        .receipt-footer {
+                            text-align: center;
+                            margin-top: 1.5rem;
+                            padding-top: 1rem;
+                            border-top: 2px dashed #10b981;
+                            font-size: 0.75rem;
+                            color: #6b7280;
+                        }
+                        .receipt-id {
+                            font-family: monospace;
+                            font-size: 0.75rem;
+                            color: #10b981;
+                            background: #ecfdf5;
+                            padding: 0.25rem 0.5rem;
+                            border-radius: 4px;
+                            display: inline-block;
+                            margin-top: 0.5rem;
+                        }
+                        button { display: none; }
+                    </style>
+                </head>
+                <body>
+                    ${receiptContent}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // ==========================================
+        // DATA PANEL - ADMIN ONLY (KEVIN & DEBBIE)
         // ==========================================
         function showDataPanel() {
+            if (!isAdmin) {
+                showToast('Akses ditolak!', 'error');
+                return;
+            }
+            
             document.getElementById('dataModal').classList.remove('hidden');
             document.getElementById('dataModal').classList.add('flex');
             renderDataTable();
@@ -979,28 +1605,52 @@
             const totalAmount = submissions.reduce((sum, item) => sum + (item.jumlah || 0), 0);
             
             document.getElementById('totalRecords').textContent = `Total: ${submissions.length} records`;
-            document.getElementById('panelTotalAmount').textContent = 'Rp' + totalAmount.toLocaleString('id-ID');
+            document.getElementById('panelTotalAmount').textContent = formatRupiahStatic(totalAmount);
 
             if (submissions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">Belum ada data</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="p-8 text-center text-slate-500">Belum ada data</td></tr>';
                 return;
             }
 
             tbody.innerHTML = submissions.map((item) => {
-                const date = new Date(item.created_at);
-                const formattedDate = date.toLocaleString("id-ID", {
+                const createdAt = item.created_at ? new Date(item.created_at) : new Date();
+                const formattedDate = createdAt.toLocaleString("id-ID", {
                     timeZone: "Asia/Jakarta",
                     year: "numeric",
                     month: "short",
-                    day: "numeric"
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
                 });
 
-                // UUID adalah string, tidak perlu konversi
                 const itemId = item.id;
+                const idKaryawan = item.employee_id || '-';
+                const status = item.status || 'pending';
+                
+                let statusClass = 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+                if (status === 'approved') statusClass = 'status-approved';
+                if (status === 'rejected') statusClass = 'status-rejected';
+
+                let actionButtons = '';
+                if (isAdmin && status === 'pending') {
+                    actionButtons = `
+                        <div class="action-buttons">
+                            <button onclick="approveItem('${itemId}', 'approved')" class="btn-approve" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button onclick="approveItem('${itemId}', 'rejected')" class="btn-reject" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                } else if (isAdmin) {
+                    actionButtons = `<span class="text-xs text-slate-500">${status === 'approved' ? '✓ Approved' : '✗ Rejected'}</span>`;
+                }
 
                 return `
                     <tr class="border-b border-white/5 hover:bg-white/5 transition">
                         <td class="p-4 font-mono text-xs text-emerald-400 font-bold">${item.id}</td>
+                        <td class="p-4 font-mono text-xs text-teal-400">${idKaryawan}</td>
                         <td class="p-4 text-slate-400">${formattedDate}</td>
                         <td class="p-4">
                             <div class="font-medium text-white">${item.nama}</div>
@@ -1009,19 +1659,16 @@
                         <td class="p-4">
                             <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">${item.kategori}</span>
                         </td>
-                        <td class="p-4 text-right font-bold text-white font-display">Rp${item.jumlah.toLocaleString('id-ID')}</td>
+                        <td class="p-4 text-right font-bold text-white font-display">${formatRupiahStatic(item.jumlah)}</td>
                         <td class="p-4">
-                            <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30">${item.status}</span>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-medium border ${statusClass}">${status}</span>
                         </td>
                         <td class="p-4">
                             ${item.file_url ? `<a href="${item.file_url}" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition"><i class="fas fa-eye mr-1"></i>Lihat</a>` : '<span class="text-slate-600">-</span>'}
                         </td>
                         <td class="p-4">
-                            <button onclick="deleteItem('${itemId}')" 
-                                    class="text-red-400 hover:text-red-300 text-sm font-medium transition p-2 rounded-lg hover:bg-red-500/10" 
-                                    title="Hapus ID: ${itemId}">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            ${actionButtons}
+                            ${isAdmin ? `<button onclick="deleteItem('${itemId}')" class="text-red-400 hover:text-red-300 text-sm font-medium transition p-2 rounded-lg hover:bg-red-500/10 ml-2" title="Hapus"><i class="fas fa-trash"></i></button>` : ''}
                         </td>
                     </tr>
                 `;
@@ -1029,25 +1676,67 @@
         }
 
         // ==========================================
-        // DELETE SINGLE ITEM - FIXED UUID HANDLING
+        // APPROVE/REJECT FUNCTION
         // ==========================================
-        async function deleteItem(id) {
-            console.log('=== DELETE START ===');
-            console.log('Raw ID:', id, 'Type:', typeof id);
-
-            // UUID adalah string, bukan number - jangan di-parse sebagai integer
-            const uuidId = String(id).trim();
-            
-            // Validasi UUID format
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-            if (!uuidRegex.test(uuidId)) {
-                console.error('Invalid UUID format:', uuidId);
-                showToast('ID tidak valid (bukan format UUID)', 'error');
+        async function approveItem(id, status) {
+            if (!isAdmin) {
+                showToast('Akses ditolak!', 'error');
                 return;
             }
 
-            console.log('UUID to delete:', uuidId);
+            const uuidId = String(id).trim();
+            const actionText = status === 'approved' ? 'menyetujui' : 'menolak';
+            
+            const result = await Swal.fire({
+                title: `${status === 'approved' ? 'Approve' : 'Reject'} Pengajuan?`,
+                html: `Anda akan <strong>${actionText}</strong> pengajuan ini.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: status === 'approved' ? '#059669' : '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: `Ya, ${actionText}!`,
+                cancelButtonText: 'Batal',
+                background: 'rgba(2, 44, 34, 0.95)',
+                color: '#f0fdf4'
+            });
 
+            if (!result.isConfirmed) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('reimbursements')
+                    .update({ 
+                        status: status,
+                        approved_by: currentUserName,
+                        approved_at: new Date().toISOString()
+                    })
+                    .eq('id', uuidId)
+                    .select();
+
+                if (error) throw error;
+
+                showToast(`Pengajuan berhasil ${status === 'approved' ? 'disetujui' : 'ditolak'}!`, 'success');
+                await loadDataFromServer(true);
+                renderDataTable();
+                updateStats();
+
+            } catch (error) {
+                console.error('Approve error:', error);
+                showToast('Gagal: ' + error.message, 'error');
+            }
+        }
+
+        // ==========================================
+        // DELETE SINGLE ITEM - ADMIN ONLY
+        // ==========================================
+        async function deleteItem(id) {
+            if (!isAdmin) {
+                showToast('Akses ditolak!', 'error');
+                return;
+            }
+
+            const uuidId = String(id).trim();
+            
             const result = await Swal.fire({
                 title: 'Hapus Data?',
                 html: `Yakin ingin menghapus data dengan ID <strong class="text-emerald-400">${uuidId.substring(0, 8)}...</strong>?`,
@@ -1064,21 +1753,16 @@
             if (!result.isConfirmed) return;
 
             try {
-                // Delete dengan UUID string (bukan number)
                 const { data, error } = await supabaseClient
                     .from('reimbursements')
                     .delete()
-                    .eq('id', uuidId)  // UUID string
+                    .eq('id', uuidId)
                     .select();
 
                 if (error) throw error;
-                if (!data || data.length === 0) {
-                    throw new Error('Data tidak ditemukan');
-                }
-
-                // Hapus file dari storage
+                
                 const deletedItem = data[0];
-                if (deletedItem.file_url) {
+                if (deletedItem && deletedItem.file_url) {
                     try {
                         const fileName = deletedItem.file_url.split('/').pop();
                         await supabaseClient.storage.from('reimburse-files').remove([fileName]);
@@ -1099,9 +1783,14 @@
         }
 
         // ==========================================
-        // CLEAR ALL DATA - FIXED UUID HANDLING
+        // CLEAR ALL DATA - ADMIN ONLY
         // ==========================================
         async function clearAllData() {
+            if (!isAdmin) {
+                showToast('Akses ditolak!', 'error');
+                return;
+            }
+
             if (submissions.length === 0) { 
                 showToast('Tidak ada data untuk dihapus', 'warning'); 
                 return; 
@@ -1122,11 +1811,10 @@
 
             if (result.isConfirmed) {
                 try {
-                    // FIXED: Gunakan .not('id', 'is', null) untuk UUID (bukan .neq('id', 0))
                     const { error } = await supabaseClient
                         .from('reimbursements')
                         .delete()
-                        .not('id', 'is', null);  // Ini akan menghapus semua data dengan UUID valid
+                        .not('id', 'is', null);
                     
                     if (error) throw error;
                     
@@ -1141,20 +1829,82 @@
         }
 
         // ==========================================
-        // EXPORT
+        // EXPORT - ADMIN ONLY (FIXED FORMAT TANGGAL)
         // ==========================================
         function exportToExcel() {
+            if (!isAdmin) {
+                showToast('Akses ditolak!', 'error');
+                return;
+            }
+
             if (submissions.length === 0) { 
                 showToast('Tidak ada data untuk diekspor', 'warning'); 
                 return; 
             }
 
-            let csv = 'ID,Tanggal Input,Nama,Email,Kategori,Tanggal Pengeluaran,Jumlah,Deskripsi,Status,File URL\n';
+            // Header CSV
+            let csv = 'ID,ID Karyawan,Departemen,Tanggal Input,Nama,Email,Kategori,Tanggal Pengeluaran,Jumlah,Deskripsi,Status,Approved By,Approved At,File URL\n';
+            
             submissions.forEach(item => {
-                csv += `"${item.id}","${item.created_at}","${item.nama}","${item.email}","${item.kategori}","${item.tanggal}",${item.jumlah},"${item.deskripsi}","${item.status}","${item.file_url || '-'}"\n`;
+                // FIX 1: Tanggal Input (created_at) - format Indonesia
+                let tanggalInput = '-';
+                if (item.created_at) {
+                    const date = new Date(item.created_at);
+                    tanggalInput = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    }) + ' ' + date.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                // FIX 2: Tanggal Pengeluaran (tanggal) - format Indonesia
+                let tanggalPengeluaran = '-';
+                if (item.tanggal) {
+                    // Handle both ISO format and date-only format
+                    const date = new Date(item.tanggal);
+                    if (!isNaN(date.getTime())) {
+                        tanggalPengeluaran = date.toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                        });
+                    } else {
+                        tanggalPengeluaran = item.tanggal; // fallback to original
+                    }
+                }
+
+                // FIX 3: Approved At - format Indonesia
+                let approvedAt = '-';
+                if (item.approved_at) {
+                    const date = new Date(item.approved_at);
+                    approvedAt = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    }) + ' ' + date.toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+
+                const empId = item.employee_id || '-';
+                const approvedBy = item.approved_by || '-';
+                
+                // Escape quotes untuk CSV
+                const escapeCsv = (str) => {
+                    if (str === null || str === undefined) return '';
+                    return String(str).replace(/"/g, '""');
+                };
+
+                csv += `"${escapeCsv(item.id)}","${escapeCsv(empId)}","${escapeCsv(item.departemen)}","${tanggalInput}","${escapeCsv(item.nama)}","${escapeCsv(item.email)}","${escapeCsv(item.kategori)}","${tanggalPengeluaran}",${item.jumlah},"${escapeCsv(item.deskripsi)}","${escapeCsv(item.status)}","${escapeCsv(approvedBy)}","${approvedAt}","${escapeCsv(item.file_url)}"\n`;
             });
 
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            // BOM untuk Excel membaca UTF-8 dengan benar
+            const BOM = '\uFEFF';
+            const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
